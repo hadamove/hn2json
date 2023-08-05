@@ -1,5 +1,14 @@
 import requests
 import json
+import argparse
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def fetch_item(item_id):
@@ -36,7 +45,22 @@ def save_comments_to_json(item_id, filename):
 
 
 if __name__ == "__main__":
-    # Replace 'POST_ID' with the ID of the post you want to fetch comments for
-    post_id = "POST_ID"
+    # Set up command-line argument parser
+    parser = argparse.ArgumentParser(
+        description="Fetch and save comments from Hacker News API."
+    )
+    parser.add_argument(
+        "post_id", type=int, help="ID of the post to fetch comments for"
+    )
+    args = parser.parse_args()
+
+    post_id = args.post_id
     output_filename = f"comments_for_post_{post_id}.json"
-    save_comments_to_json(post_id, output_filename)
+
+    logging.info(f"Starting script for post_id: {post_id}")
+
+    try:
+        save_comments_to_json(post_id, output_filename)
+        logging.info(f"Comments for post_id {post_id} saved to {output_filename}")
+    except Exception as e:
+        logging.error(f"Error occurred: {e}")
