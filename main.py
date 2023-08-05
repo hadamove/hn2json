@@ -2,6 +2,7 @@ import requests
 import json
 import argparse
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 # Configure logging
 logging.basicConfig(
@@ -17,24 +18,35 @@ def fetch_item(item_id):
     return response.json()
 
 
+def fetch_comment_recursive(comment_id):
+    comment = fetch_item(comment_id)
+    if comment and comment["type"] == "comment":
+        return {
+            "id": comment["id"],
+            "author": comment.get("by", ""),
+            "time": comment.get("time", 0),
+            "text": comment.get("text", ""),
+            "kids": fetch_comments(comment["id"]),
+        }
+    return None
+
+
 def fetch_comments(item_id):
     item = fetch_item(item_id)
     if item is None or "kids" not in item:
         return []
 
     comments = []
-    for comment_id in item["kids"]:
-        comment = fetch_item(comment_id)
-        if comment and comment["type"] == "comment":
-            comments.append(
-                {
-                    "id": comment["id"],
-                    "author": comment.get("by", ""),
-                    "time": comment.get("time", 0),
-                    "text": comment.get("text", ""),
-                    "kids": fetch_comments(comment["id"]),
-                }
-            )
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(fetch_comment_recursive, comment_id)
+            for comment_id in item["kids"]
+        ]
+        for future in futures:
+            comment = future.result()
+            if comment:
+                comments.append(comment)
+
     return comments
 
 
